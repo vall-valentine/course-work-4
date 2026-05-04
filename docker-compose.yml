@@ -1,0 +1,75 @@
+services:
+  # ML Service (NER Model + FastAPI)
+  ml-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ml
+    container_name: ner-ml-service
+    ports:
+      - "8000:8000"
+    volumes:
+      # Монтируем модель (чтобы не копировать в образ)
+      - ./model:/app/model
+      - ./model_finetuned:/app/model_finetuned
+      # MLflow артефакты
+      - ./mlruns:/app/mlruns
+      # Экспортированные данные
+      - ./exported_data:/app/exported_data
+    environment:
+      - MODEL_DIR=model
+      - HOST=0.0.0.0
+      - PORT=8000
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - diplom-network
+
+  # VK Bot
+  vk-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: finashka-vk-bot
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    volumes:
+      # База данных (persistent storage)
+      - ./data:/app/data
+      - ./debug_images:/app/debug_images
+    environment:
+      - VK_TOKEN=${VK_TOKEN}
+      - VK_GROUP_ID=${VK_GROUP_ID}
+      - MODEL_HOST=ml-service
+      - MODEL_PORT=8000
+      - DB_PATH=data/purchases.db
+    restart: unless-stopped
+    networks:
+      - diplom-network
+
+  # MLflow UI (для просмотра экспериментов)
+  mlflow:
+    image: python:3.10-slim
+    container_name: mlflow-ui
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlflow/artifacts
+      - ./mlflow.db:/mlflow/mlflow.db
+    working_dir: /mlflow
+    command: >
+      bash -c "pip install --no-cache-dir mlflow==3.11.1 &&
+               mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri sqlite:////mlflow/mlflow.db --default-artifact-root file:///mlflow/artifacts"
+    restart: unless-stopped
+    networks:
+      - diplom-network
+
+networks:
+  diplom-network:
+    driver: bridge
