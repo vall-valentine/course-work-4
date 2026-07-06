@@ -60,7 +60,8 @@ python auto_labeling.py --min-samples 100
 - Параметры: learning rate, epochs, batch size, dataset size
 - Артефакты: сохранённые модели, metadata
 
-**Первичный fine-tuning модели**: [Colab](https://colab.research.google.com/drive/1odPiFY4CJCjLkcQVrI19GQ-5EJvvph8u)
+**Первичный fine-tuning модели**: [Colab](https://colab.research.google.com/drive/1YySen7gmoWCZF4rzs1KQh4SQTAunN8FX)
+**Baseline**: [Colab](https://colab.research.google.com/drive/1odPiFY4CJCjLkcQVrI19GQ-5EJvvph8u)
 
 ---
 
